@@ -1,7 +1,7 @@
-### 2º entrega do projeto de Infraestrutura de Comunicações (Transmissão Confiável)
+# 2º entrega do projeto de Infraestrutura de Comunicações (Transmissão Confiável)
 Este projeto implementa um sistema de transmissão confiável, baseado no RDT 3.0 (Receptor-Transmissor de Dados) apresentado na disciplina. O projeto é dedicado à segunda entrega da do trabalho e visa demonstrar a eficiência do RDT 3.0 implementado, incluindo a capacidade de lidar com perdas de pacotes aleatórios.
 
-# Requisitos
+## Requisitos
 Python 3.7 ou superior
 
 ## Funcionamento do projeto
@@ -14,7 +14,7 @@ Python 3.7 ou superior
 ## Testando a Eficiência
 Para testar a eficiência do RDT 3.0 implementado, um gerador de perdas de pacotes aleatórios foi incorporado. Isso resultará em timeouts no transmissor para pacotes perdidos, demonstrando como o protocolo lida com esse tipo de situação.
 
-# Equipe
+### Equipe
 - Frederico Janovitz Novais
 - Gabriel Pierre Carvalho Coelho
 - Gustavo Santana de Almeida
