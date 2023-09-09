@@ -62,19 +62,19 @@ class Rdt:
             # Inicia o timeout do socket e envia o pacote:
             self.socket.settimeout(1)
             self.send(payload)  
-            print('pacote enviado\n')
+            print('Pacote enviado\n')
 
             try:
-                print('esperando pelo ack...\n')
+                print('Aguardando ACK...\n')
                 # Tenta receber o ACK usando o método `rdt_rcv`
                 rcvpkt = self.rdt_rcv('wait_ack')  
             except:
-                print('timeout... reenvio necessário')
+                print('Estouro do temporizador, reenviando arquivo')
                 continue  # Em caso de timeout, continua o loop para reenviar o pacote de envio.
             else: 
                 # Se não entrar no except, remove o timeout do socket:
                 self.socket.settimeout(None)  
-                print('pacote recebido corretamente\n')
+                print('Pacote recebido com sucesso\n')
                 break
 
         self.sec_client = 1 - self.sec_client  # Atualiza o número de sequência para o próximo pacote a ser enviado
@@ -83,28 +83,28 @@ class Rdt:
     def rdt_rcv(self, state: str = 'null'):
         # Ou ele espera um pacote ou espera um ACK
         if(state != 'wait_ack'):
-            print('esperando por pacotes...\n')
+            print('Aguardando pacotes...\n')
 
             rcvpkt = None 
             # Enquanto não houver recebido um pacote válido.
             while(not rcvpkt or corrupt(rcvpkt) or rcvpkt['num_seq'] != self.sec_server):
                 rcvpkt = eval(self.receive().decode()) ## Decodifica os bytes
-            print('pacote recebido.\n')
+            print('O pacote foi recebido.\n')
 
             ack_data = make_ack(self.sec_server)  
             self.send(ack_data)  
-            print('ack enviado...\n')
+            print('ACK enviado\n')
 
             # Atualiza o número de sequência para o próximo pacote a ser recebido
             self.sec_server = 1 - self.sec_server  
         else:
-            print('esperando por um ack\n')
+            print('Aguardando ACK\n')
 
             rcvpkt = None
             # Enquanto não houver recebido um pacote válido.
             while(not rcvpkt or corrupt(rcvpkt) or rcvpkt['num_seq'] != self.sec_client):
                 rcvpkt = eval(self.receive().decode())  ## Decodifica os bytes
-            print('ack recebido.\n')
+            print('ACK recebido.\n')
 
         # Retorna o pacote recebido (ou o pacote de confirmação recebido)
         return rcvpkt  
