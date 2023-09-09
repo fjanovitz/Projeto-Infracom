@@ -4,10 +4,9 @@ from server.rdt import *
 BUFFER_SIZE = 1024
 
 def main():
-    file_name = input("Escreva o nome e tipo do arquivo que deseja enviar (test_file.txt):")
-    # Conexão foi abstraída para a classe Rdt
+    file_name = input("Escreva o nome e tipo do arquivo que deseja enviar (por exemplo: teste.txt):")
+    # Conexão foi abstraída para a classe Rdt, que fornece uma conexão UDT com os príncipios de RDT3.0
     client = Rdt('client')
-    # No qual fornece uma conexão UDT com os príncipios de RDT3.0
 
     if os.path.exists(file_name): # Verificar se o arquivo existe
 
@@ -26,7 +25,7 @@ def main():
             # Enviando o último bloco
             client.rdt_send(b'')
             
-        print('Blocos de arquivo enviados para o servidor')
+        print('Os blocos de arquivo foram enviados para o servidor')
         
         # Receber o arquivo do servidor
         file_name = 'file_received.txt'
@@ -34,8 +33,7 @@ def main():
         data = bytearray()
         while True:
             chunk = client.rdt_rcv()['data']
-            # Se não houver mais dados para receber, sair do loop
-            if not chunk:
+            if not chunk: # Se não houver mais dados para receber, sair do loop
                 break
             data += chunk # Adicionando o chunk ao arquivo
 
@@ -43,10 +41,10 @@ def main():
             newFile.write(data)
             newFile.close()
 
-        print("Blocos recebidos pelo servidor")
+        print("Os blocos de arquivo foram recebidos pelo servidor")
         
     else:
-        print("Crie o arquivo e põe no diretório do cliente!")
+        print("Por favor, insira o arquivo que se deseja enviar no diretório do cliente")
     
 
 if __name__ == '__main__':

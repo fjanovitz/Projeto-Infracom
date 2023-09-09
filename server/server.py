@@ -8,7 +8,7 @@ def main():
     # No qual fornece uma conexão UDT com os príncipios de RDT3.0
 
     while True:
-        print('Servidor pronto para receber')
+        print('O servidor está pronto para receber arquivos')
         servidor.reset_num_seq()
 
         # Com intuito de criar o mesmo arquivo no servidor:
@@ -26,7 +26,7 @@ def main():
                     break
                 file.write(bytes_read)
 
-        print("Dados recebidos pelo cliente")
+        print("Dados recebidos pelo receptor")
 
         # Enviando o arquivo de volta para o cliente
         with(open(filename, "rb")) as file:
@@ -37,7 +37,7 @@ def main():
                     file.close()
                     break
         
-        print("arquivo enviado para o client")
+        print(" O arquivo foi enviado para o receptor")
 
 if __name__ == '__main__':
     main()
