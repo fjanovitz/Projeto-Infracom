@@ -3,9 +3,8 @@ from rdt import *
 BUFFER_SIZE = 1024
 
 def main():
-    # Conexão foi abstraída para a classe Rdt
+    # Conexão foi abstraída para a classe Rdt, que fornece uma conexão UDT com RDT3.0
     servidor = Rdt('server')
-    # No qual fornece uma conexão UDT com os príncipios de RDT3.0
 
     while True:
         print('O servidor está pronto para receber arquivos')
