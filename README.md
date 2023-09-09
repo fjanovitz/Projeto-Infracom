@@ -2,7 +2,7 @@
 Este projeto implementa um sistema de transmissão confiável, baseado no RDT 3.0 (Receptor-Transmissor de Dados) apresentado na disciplina. O projeto é dedicado à segunda entrega da do trabalho e visa demonstrar a eficiência do RDT 3.0 implementado, incluindo a capacidade de lidar com perdas de pacotes aleatórios.
 
 ## Funcionamento 
-O sistema cliente-servidor implementa a transferência confiável de arquivos sobre UDP usando o protocolo RDT 3.0. O cliente solicita o arquivo que deseja enviar, verifica sua existência, estabelece uma conexão com o servidor via RDT 3.0 e envia o arquivo em blocos confiáveis. O servidor, por sua vez, recebe o arquivo, evita erros de nome de arquivo, escreve os dados recebidos e reenvia o arquivo de volta ao cliente, tudo isso mantendo a confiabilidade por meio do protocolo RDT 3.0
+O cliente solicita o arquivo que deseja enviar, verifica sua existência, estabelece uma conexão com o servidor via RDT 3.0 e envia o arquivo em blocos confiáveis. O servidor, por sua vez, recebe o arquivo, evita erros de nome de arquivo, escreve os dados recebidos e reenvia o arquivo de volta ao cliente, tudo isso mantendo a confiabilidade por meio do protocolo RDT 3.0
 
 ## Requisitos
 Python 3.7 ou superior
