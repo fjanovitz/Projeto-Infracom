@@ -4,7 +4,8 @@ import threading
 import time
 
 class RDTServer:
-    def __init__(self, addressPort = ("127.0.0.1", 20001), bufferSize = 1024):
+    # Configurações do servidor
+    def __init__(self, addressPort=("127.0.0.1", 20001), bufferSize=1024):
         self.timeout = 0.1
         self.sender_addr = 0
         self.addressPort =  addressPort
@@ -12,80 +13,84 @@ class RDTServer:
         self.UDPSocket = socket(AF_INET, SOCK_DGRAM)
         self.UDPSocket.bind(self.addressPort)
         self.UDPSocket.settimeout(self.timeout)
-        self.lista_usuarios = []
+        self.lista_usuarios = []    # Lista de todos os usuários ativos no servidor
+        self.lista_banidos = []     # Lista de usuários banidos no servidor
         self.lista_seq = {}
-        print("Server running")
+        self.lista_amigos = {}      # Dicionário para armazenar a lista de amigos
+        print("O servidor foi iniciado")
         self.run()
 
+    # Função de espera, onde o servidor aguarda de prontidão para receber mensagens
     def run(self):
         while(1):
-            print("Esperando nova mensagem")
+            print("Aguardando mensagens")
             data, sender_addr = self.receive()
             print("Mensagem recebida")
             if data != "" :
                 self.print_message(data, sender_addr)
             
+    # Função para exibir mensagens na tela
     def print_message(self, data, sender_addr):
-        word = data.strip() # tirar espaço no começo e fim
-        if word == 'bye':
-            # cliente sai do chat
+        word = data.strip()     # Remoção dos espaços antes e depois do texto digitado
+        if word == 'bye':       # Cliente solicita para sair do chat
             for x in self.lista_usuarios:
                 if x[0] == sender_addr:
                     data = getTime() + ' -> ' + x[1] + ': bye\n'
                     data += x[1] + ' saiu do chat'
                     self.lista_usuarios.remove((x[0], x[1]))
                     self.lista_seq.pop(x[0])
-                    # desconectar
-        elif word == 'list':
-            # listar as pessoas presentes no chat
+        elif word == 'list':    # Cliente solicita a lista de usuários presentes no chat
             data = 'Pessoas no chat:\n'
             for x in self.lista_usuarios:
                 data += x[1] + '\n'
-        else:
+        else:                   # Caso não solicite nenhum comando, a mensagem enviada pelo cliente é enviada para o chat e fica visível para os outros usuários
             nome = ""
             for x in self.lista_usuarios:
                 if x[0] == sender_addr:
                     nome = x[1]
             data = getTime() + ' -> ' + nome + ": " + data
-            
-        self.broadcast_message(data)     
 
+        self.broadcast_message(data) # O servidor envia a mensagem para os terminais dos clientes     
+
+    # Função que faz a transmissão da mensagem para todos os clientes
     def broadcast_message(self, data):
         for x in self.lista_usuarios:
             self.send_pkg(data, x[0])
     
+    # Função que faz a transmissão para o cliente
     def send(self, data, sender_addr):
-        #print("Sending to client")
         self.UDPSocket.sendto(data, sender_addr)
 
+    #Função para envio de pacotes
     def send_pkg(self, data, sender_addr):
         data = self.create_header(data, sender_addr)
         ack = False
-
         self.UDPSocket.settimeout(self.timeout)
         rcv_addr = 0
         while not ack:
             self.send(data, sender_addr)
             try:
                 data, rcv_addr = self.UDPSocket.recvfrom(self.bufferSize)
-            except timeout:
-                print("Did not receive ACK. Sending again.")
+            except timeout: # Ocorrência do estouro do temporizador
+                print("Estouro do temporizador, reenviando pacote")
             else:
                 ack = self.rcv_ack(data, sender_addr)
 
         self.UDPSocket.settimeout(None)
 
-
+    #Função que realiza a conexão entre o cliente e o servidor
     def new_connection(self, nome, sender_addr):
         self.lista_usuarios.append((sender_addr, nome))
         self.lista_seq.update({sender_addr: 0})
 
+    # Avisa aos outros usuários que um novo usuário entrou no chat
     def broadcast_new_user(self, nome):
         data = nome + " entrou na sala"
         for x in self.lista_usuarios:
             #print(x)
             self.send_pkg(data, x[0])
 
+    # Função que recebe o pacote
     def receive(self):
         self.UDPSocket.settimeout(None)
         #print("Receveing package")
@@ -93,10 +98,10 @@ class RDTServer:
         self.UDPSocket.settimeout(self.timeout)
         #print("pkg received")
         data = self.rcv_pkg(data, sender_addr)
-
         #print("Received")
         return data, sender_addr
 
+    # Função que envia ACKs e NACKs
     def send_ack(self, ack, sender_addr):
         if ack:
             #print("Sending ACK")
@@ -106,13 +111,12 @@ class RDTServer:
             data = self.create_header("NACK", sender_addr)
         self.send(data, sender_addr)
 
-
+    #Função que decodifica o pacote recebido e checa se é uma nova conexão ou não
     def rcv_pkg(self, data, sender_addr):
         data = eval(data.decode())
         seq_num = data['seq']
         checksum = data['checksum']
         payload = data['payload']
-
         print(data)
         try:
             x, y = payload.split()
@@ -130,14 +134,12 @@ class RDTServer:
                 else:
                     self.send_ack(0, sender_addr)
                     return ""
-
         if(self.lista_seq.get(sender_addr) != None):
             print(self.lista_seq)
             seq = self.lista_seq.get(sender_addr)
         else:
             self.send_ack(0, sender_addr)
             return ""
-
         if self.checksum_(checksum, payload) and seq_num == seq:
             self.send_ack(1, sender_addr)
             #print(self.lista_seq)
@@ -155,18 +157,15 @@ class RDTServer:
         seq_num = data['seq']
         checksum = data['checksum']
         payload = data['payload']
-
         if(self.lista_seq.get(sender_addr) != None):
             seq = self.lista_seq.get(sender_addr)
         else:
             return False
-
         if self.checksum_(checksum, payload) and seq_num == seq and payload == "ACK":
             self.lista_seq.update({sender_addr: 1-seq})
             return True
         else:
             return False
-
 
     def checksum_(self, chcksum, payload):
         if checksum(payload) == chcksum:
@@ -174,9 +173,7 @@ class RDTServer:
         else:
             return False
 
-
     def create_header(self, data, sender_addr):
-
         chcksum = checksum(data)
         seq = self.lista_seq.get(sender_addr)
         return str({
@@ -189,9 +186,9 @@ class RDTServer:
         print("Closing socket")
         self.UDPSocket.close()
 
-
 class RDTClient:
 
+    # Configuração do cliente
     def __init__(self, isServer = 0, addressPort = ("127.0.0.1", 20001), bufferSize = 1024):
         self.sender_addr = 0
         self.timeout = 0.1
@@ -238,7 +235,7 @@ class RDTClient:
         #print("Thread input started")
         while(1):
             entrada = input()
-            print("\033[A                             \033[A")
+            print("==============================")
             #print("Entrada: ", entrada)
             self.lock.acquire()
             #print("Thread input locked\nEnviando para o servidor: ")
