@@ -16,10 +16,10 @@ class RDTServer:
         self.lista_usuarios = []    # Lista de todos os usuários ativos no servidor
         self.lista_banidos = []     # Lista de usuários banidos no servidor
         self.lista_seq = {}
-        self.lista_amigos = {}      # Dicionário para armazenar a lista de amigos
-        self.ban_votes = {}  # Dicionário para rastrear os votos
+        self.lista_amigos = {}  # Dicionário para listar os amigos de cada usuário
+        self.ban_votes = {}     # Dicionário para rastrear os votos
         self.ban_target = None  # Nome do usuário que pode ser banido
-        print("O servidor foi iniciado")
+        print("O servidor está ativo")
         self.run()
 
     # Função de espera, onde o servidor aguarda de prontidão para receber mensagens
@@ -33,33 +33,121 @@ class RDTServer:
             
     # Função para exibir mensagens na tela
     def print_message(self, data, sender_addr):
-        word = data.strip()     # Remoção dos espaços antes e depois do texto digitado
-        if word == 'bye':       # Cliente solicita para sair do chat
+        word = data.strip() # Remove espaços
+        if word == 'bye':   # Usuário deseja sair do chat
             for x in self.lista_usuarios:
                 if x[0] == sender_addr:
-                    message = f"{getTime()} -> {x[1]}: bye\n{x[1]} saiu do chat"
+                    message = f"{getTime()} -> == {x[1]} saiu do chat =="
                     self.broadcast_message(message)
                     self.lista_usuarios.remove((x[0], x[1]))
                     self.lista_seq.pop(x[0])
-        elif word == 'list':    # Cliente solicita a lista de usuários presentes no chat
+                    
+        elif word == 'list':    # Exibe a lista de pessoas no chat
             data = 'Pessoas no chat:\n'
             for x in self.lista_usuarios:
                 data += x[1] + '\n'
-        else:                   # Caso não solicite nenhum comando, a mensagem enviada pelo cliente é enviada para o chat e fica visível para os outros usuários
+            self.broadcast_message(data)
+            
+        elif word.startswith('addtomylist'):    # Adiciona um usuário como amigo
+            _, nome_amigo = word.split()
+            if sender_addr not in self.lista_amigos:
+                self.lista_amigos[sender_addr] = []
+            self.lista_amigos[sender_addr].append(nome_amigo)
+            data = f"{nome_amigo} adicionado à lista de amigos."
+            self.send_pkg(data, sender_addr)
+
+        elif word.startswith('removefrommylist'):   # Remove um amigo da lista de amigos do usuário
+            _, nome_amigo = word.split()
+            if sender_addr in self.lista_amigos:
+                try:
+                    self.lista_amigos[sender_addr].remove(nome_amigo)
+                    data = f"{nome_amigo} removido da lista de amigos."
+                except ValueError:
+                    data = f"{nome_amigo} não encontrado na lista de amigos."
+            else:
+                data = "Você ainda não tem amigos na lista."
+            self.send_pkg(data, sender_addr)
+        
+        elif word == 'mylist':  # Exibe lista de amigos do usuário
+            if sender_addr in self.lista_amigos:
+                amigos = ', '.join(self.lista_amigos[sender_addr])
+                if amigos:
+                    data = f"Seus amigos são:\n{amigos}."
+                else:
+                    data = "Você não tem amigos na lista."
+            else:
+                data = "Você ainda não tem amigos na lista."
+            self.send_pkg(data, sender_addr)
+        
+        elif word.startswith('ban'):
+            _, target = word.split()
+            if self.ban_target is None:
+                self.ban_target = target
+                self.ban_votes = {}
+            
+            # Verifique se o comando 'ban' é para o mesmo alvo
+            if self.ban_target == target:
+                self.ban_votes[sender_addr] = True
+                num_votes = len(self.ban_votes)
+                num_clients = len(self.lista_usuarios)
+                threshold = num_clients // 2 + 1  # Mais da metade dos clientes
+                
+                # Enviar a atualização para todos os clientes
+                for client_addr, client_name in self.lista_usuarios:
+                    self.send_pkg(f"[ {target} ] ban {num_votes}/{threshold}", client_addr)
+                
+                # Verificar se o alvo deve ser banido
+                if num_votes >= threshold:
+                    self.kick_out(self.ban_target)
+                    self.ban_target = None
+                    self.ban_votes = {}
+            
+        else:
             nome = ""
             for x in self.lista_usuarios:
                 if x[0] == sender_addr:
                     nome = x[1]
-            data = getTime() + ' -> ' + nome + ": " + data
+            self.custom_broadcast_message(data, nome, sender_addr)
 
-        self.broadcast_message(data) # O servidor envia a mensagem para os terminais dos clientes     
-
-    # Função que faz a transmissão da mensagem para todos os clientes
+    def custom_broadcast_message(self, message, sender_name, sender_addr):
+        for client_addr, client_name in self.lista_usuarios:
+            tag = ""
+            if client_addr in self.lista_amigos and sender_name in self.lista_amigos[client_addr]:
+                tag = "[amigo] "
+            
+            custom_message = f"{getTime()} -> {tag}{sender_name}: {message}"
+            self.send_pkg(custom_message, client_addr)
+    
     def broadcast_message(self, data):
         for x in self.lista_usuarios:
             self.send_pkg(data, x[0])
     
-    # Função que faz a transmissão para o cliente
+    def kick_out(self, target):
+        # Encontre o endereço e o nome correspondente ao nome de usuário 'target'
+        target_addr = None
+        for addr, username in self.lista_usuarios:
+            if username == target:
+                target_addr = addr
+                break
+
+        if target_addr is not None:
+            # Informe a todos os outros clientes que o usuário será banido
+            for addr, _ in self.lista_usuarios:
+                self.send_pkg(f"{target} foi banido.", addr)
+                
+            # Remova o usuário da lista de usuários e outras estruturas de dados
+            if target_addr in self.lista_seq:
+                del self.lista_seq[target_addr]
+            if target_addr in self.lista_amigos:
+                del self.lista_amigos[target_addr]
+            for x in self.lista_usuarios:
+                if x[0] == target_addr:
+                    self.lista_usuarios.remove((x[0], x[1]))
+                    self.lista_seq.pop(x[0])
+        else:
+            # O usuário 'target' não foi encontrado
+            print(f"Usuário {target} não encontrado.")
+
     def send(self, data, sender_addr):
         self.UDPSocket.sendto(data, sender_addr)
 
